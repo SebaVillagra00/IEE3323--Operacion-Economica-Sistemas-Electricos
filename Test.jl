@@ -14,11 +14,13 @@ objective_value(model)
 value(x)
 value(y)
 shadow_price(c1)
-shadow_price(c2)
+# Elimine shadow_price(c2)
 
+## revisar performance Tips en la página de julia ---> se recomienda typing (definir tipos)  ->> utilizar for  --> el signo de exclamación en un afunción modifica el input 
+
+
+# Estoy agregando unas lineas
+println("Hola Jovenes")
 
 ###esta
 
-#esta no
-
-## revisar performance Tips en la página de julia ---> se recomienda typing (definir tipos)  ->> utilizar for  --> el signo de exclamación en un afunción modifica el input 
