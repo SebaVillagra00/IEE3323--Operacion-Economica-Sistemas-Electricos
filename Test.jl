@@ -16,4 +16,9 @@ value(y)
 shadow_price(c1)
 shadow_price(c2)
 
+
+###esta
+
+#esta no
+
 ## revisar performance Tips en la página de julia ---> se recomienda typing (definir tipos)  ->> utilizar for  --> el signo de exclamación en un afunción modifica el input 
