@@ -1,6 +1,7 @@
 #Iniciación de paquetes
 using DataFrames, CSV
 using JuMP , HiGHS
+using Gurobi
 
 #Definición de struct   
 #Hay que ver bien como usarlas
@@ -60,3 +61,29 @@ for i in 1:nrow(demand)
     push!(Demandas, x)
 end
 println(Lineas[4].Imp)
+
+
+## Matriz Admitancia
+
+
+### Problema optimizacion
+m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
+
+## Variables
+@variable(model, x >= 0)
+@variable(model, 0 <= y <= 3)
+
+## Funcion Objetivo
+@objective(model, Min, 12x + 20y)
+
+## Restricciones
+# Equilibrio de Potenica
+@constraint(model, c1, 6x + 8y >= 100)
+# Potencia maxima
+@constraint(model, c2, 7x + 12y >= 120)
+# Potencia minima
+@constraint(model, c2, 7x + 12y >= 120)
+# Rampa up
+@constraint(model, c2, 7x + 12y >= 120)
+# Rampa dn
+@constraint(model, c2, 7x + 12y >= 120)
