@@ -50,22 +50,27 @@ lines           = copy(lines_ref)
 
 
 #inclusión en variables
+P_base = 100
+T = ncol(demand)-1      # N° bloques temporales
+N = nrow(demand)        # N° nodos 
+I = nrow(generators)    # N° Generadores
+L = nrow(lines)         # N° Lineas
 Generadores = []
 Demandas    = []
 Lineas      = []
 
-for i in 1:nrow(generators)
+for i in 1:I
     x = Gen(generators[i,1],generators[i,2],generators[i,3],generators[i,4],generators[i,5],generators[i,6])
     push!(Generadores, x)
 end
 ## println(Generadores[1].PotMax) ejemplo de como obtener un prámetro en particular
 
-for i in 1:nrow(lines)
+for i in 1:L
     x = Linea(lines[i,1],lines[i,2],lines[i,3],lines[i,4],lines[i,5])
     push!(Lineas, x)
 end
 
-for i in 1:nrow(demand)
+for i in 1:N
     x = Demanda(demand[i,1],demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7])
     push!(Demandas, x)
 end
@@ -75,10 +80,7 @@ println(Lineas[4].Imp)
 ## Matriz Admitancia
 
 ## IMPORTANTE: ARRIBA HAY QUE DEFINIR N,T e I.
-P_base = 100
-T = ncol(demand)-1
-N = nrow(demand)
-I = nrow(generators)
+
 
 ### Problema optimizacion
 m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
@@ -92,8 +94,13 @@ m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
 ## Restricciones
 # Equilibrio de Potenica
+#Flujo DC
 @constraint(model, c1, restriccion matematica)
+#Flujo en lineas. Se considera o de origen, y d de destino
+@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T],) ######### Estaba escribiendo esta
 
+#Angulo de referencia
+@constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)   ##hat que definir cual utilizar. Por ahora el 1
 
 
 #Restricciones de generadores
