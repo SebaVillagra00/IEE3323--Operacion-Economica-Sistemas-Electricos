@@ -75,7 +75,10 @@ println(Lineas[4].Imp)
 ## Matriz Admitancia
 
 ## IMPORTANTE: ARRIBA HAY QUE DEFINIR N,T e I.
-
+P_base = 100
+T = ncol(demand)-1
+N = nrow(demand)
+I = nrow(generators)
 
 ### Problema optimizacion
 m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
@@ -85,16 +88,20 @@ m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 @variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
 
 ## Funcion Objetivo
-@objective(model, Min, costos xddxdxd)
+@objective(model, Min, sum(Generadores[i].Cost * p[i,t] for i in 1:I, t in 1:T ))
 
 ## Restricciones
 # Equilibrio de Potenica
 @constraint(model, c1, restriccion matematica)
+
+
+
+#Restricciones de generadores
 # Potencia maxima
-@constraint(model, c2, 7x + 12y >= 120)
+@constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= Generadores[i].PotMax)
 # Potencia minima
-@constraint(model, c2, 7x + 12y >= 120)
+@constraint(model, PMinConstraint[i in 1:I, t in 1:T], Generadores[i].PotMin<= p[i,t])
 # Rampa up
-@constraint(model, c2, 7x + 12y >= 120)
+@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] <= Generadores[i].Ramp)
 # Rampa dn
-@constraint(model, c2, 7x + 12y >= 120)
+@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] >= -Generadores[i].Ramp)

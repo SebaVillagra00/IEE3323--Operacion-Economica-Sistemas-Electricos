@@ -4,7 +4,7 @@ Los archivos están escritos en Julia y constan de problemas de optimización re
 * Autores: Vicente Andres Goehring Beltran & Sebastián Ignacio Villagra Cabrera
 * Mail: sebastian.villagra@uc.cl
 * Fecha creación: 27-03-2024
-* Fecha última actualización: 27-03-2024
+* Fecha última actualización: 20-04-2024
 
 ------------------------------------------------
 ## Resumen
