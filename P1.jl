@@ -74,7 +74,7 @@ for i in 1:N
     x = Demanda(demand[i,1],demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7])
     push!(Demandas, x)
 end
-println(Lineas[4].Imp)
+#println(Lineas[4].Imp)
 
 
 ## Matriz Admitancia
@@ -95,7 +95,11 @@ m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 ## Restricciones
 # Equilibrio de Potenica
 #Flujo DC
-@constraint(model, c1, restriccion matematica)
+@constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
+sum(p[i,t] for i in 1:I if Generadores[i].Barra == n)
+- p[n][t]      ### power balance alredy in DC aproximation
+== sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
++ sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
 #Flujo en lineas. Se considera o de origen, y d de destino
 @constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T],) ######### Estaba escribiendo esta
 
