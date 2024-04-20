@@ -24,13 +24,16 @@ struct Gen
     Barra::Int64
 end
 struct Demanda
-    Barra::Int64
-    T1::Int64
-    T2::Int64
-    T3::Int64
-    T4::Int64
-    T5::Int64
-    T6::Int64
+    T::Int64
+    Barra1::Int64
+    Barra2::Int64
+    Barra3::Int64
+    Barra4::Int64
+    Barra5::Int64
+    Barra6::Int64
+    Barra7::Int64
+    Barra8::Int64
+    Barra9::Int64
 end
 struct Linea
     Id::Int64
@@ -71,7 +74,7 @@ for i in 1:L
 end
 
 for i in 1:N
-    x = Demanda(demand[i,1],demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7])
+    x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7],]
     push!(Demandas, x)
 end
 #println(Lineas[4].Imp)
@@ -83,7 +86,7 @@ end
 
 
 ### Problema optimizacion
-m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
+model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
 ## Variables
 @variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t
@@ -96,9 +99,8 @@ m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 # Equilibrio de Potenica
 #Flujo DC
 @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
-sum(p[i,t] for i in 1:I if Generadores[i].Barra == n)
-- p[n][t]      ### power balance alredy in DC aproximation
-== sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
+sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      == 
+  sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
 + sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
 #Flujo en lineas. Se considera o de origen, y d de destino
 @constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T],) ######### Estaba escribiendo esta
