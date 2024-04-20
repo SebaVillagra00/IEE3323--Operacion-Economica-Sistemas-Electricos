@@ -1,3 +1,11 @@
+# Tarea 1 Operacion Economica de Sistemas Electricos
+# Vicente Goehring & Sebastian Villagra
+# Abril 2024
+
+# Codigo busca crear un modelo de optimizacion para el despacho economico
+# de forma mas general posible, i.e., entra como input cualquier CSV con
+# los datos de un sistema y optimiza de forma robusta.
+
 #Iniciación de paquetes
 using DataFrames, CSV
 using JuMP , HiGHS
@@ -65,20 +73,22 @@ println(Lineas[4].Imp)
 
 ## Matriz Admitancia
 
+## IMPORTANTE: ARRIBA HAY QUE DEFINIR N,T e I.
+
 
 ### Problema optimizacion
 m = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
 ## Variables
-@variable(model, x >= 0)
-@variable(model, 0 <= y <= 3)
+@variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t
+@variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
 
 ## Funcion Objetivo
-@objective(model, Min, 12x + 20y)
+@objective(model, Min, costos xddxdxd)
 
 ## Restricciones
 # Equilibrio de Potenica
-@constraint(model, c1, 6x + 8y >= 100)
+@constraint(model, c1, restriccion matematica)
 # Potencia maxima
 @constraint(model, c2, 7x + 12y >= 120)
 # Potencia minima
