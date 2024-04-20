@@ -6,9 +6,10 @@
 # de forma mas general posible, i.e., entra como input cualquier CSV con
 # los datos de un sistema y optimiza de forma robusta.
 
+
 #Iniciación de paquetes
 using DataFrames, CSV
-using JuMP , HiGHS
+using JuMP , HiGHS      # https://jump.dev/JuMP.jl/stable/manual/models/ 
 using Gurobi
 
 #Definición de struct   
