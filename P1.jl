@@ -89,7 +89,7 @@ end
 model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
 ## Variables
-@variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t
+@variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t. Valor en p.u.
 @variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
 
 ## Funcion Objetivo
@@ -100,24 +100,24 @@ model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 #Flujo DC
 @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
 sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      == 
-  sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
-+ sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
+P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
++ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
 #Flujo en lineas. Se considera o de origen, y d de destino
-@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax) 
-@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax)
+@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
+@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
 #Angulo de referencia
-@constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)   ##hat que definir cual utilizar. Por ahora el 1
+@constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
 
 
 #Restricciones de generadores
 # Potencia maxima
 @constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= Generadores[i].PotMax)
 # Potencia minima
-@constraint(model, PMinConstraint[i in 1:I, t in 1:T], Generadores[i].PotMin<= p[i,t])
+@constraint(model, PMinConstraint[i in 1:I, t in 1:T], Generadores[i].PotMin <= p[i,t])
 # Rampa up
-@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] <= Generadores[i].Ramp)
+@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Generadores[i].Ramp)
 # Rampa dn
-@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] >= -Generadores[i].Ramp)
+@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= -Generadores[i].Ramp)
 
 
 #RESULATDOS
@@ -126,9 +126,9 @@ sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      ==
 #Valores de potencia de cada generador
 JuMP.optimize!(model)
 for t in 1:T
-    println("Generación en T=", t," es para la unidad 1: ", JuMP.value(p[1,t])," para la unidad 2: ", JuMP.value(p[2,t]), "y para la unidad 3: ", JuMP.value(p[3,t]))
+    println("Generación en T=", t," es para la unidad 1: ", JuMP.value(p[1,t])," para la unidad 2: ", JuMP.value(p[2,t]), " y para la unidad 3: ", JuMP.value(p[3,t]))
 end
-println("Dando un costo total de Operacion de: ", JuMP.objective_value)
+println("Dando un costo total de Operacion de: ", JuMP.objective_value(model))
 
 
 #Comparación resultados
