@@ -74,7 +74,7 @@ for i in 1:L
 end
 
 for i in 1:N
-    x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7],]
+    x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7]]
     push!(Demandas, x)
 end
 #println(Lineas[4].Imp)
@@ -103,8 +103,8 @@ sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      ==
   sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
 + sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
 #Flujo en lineas. Se considera o de origen, y d de destino
-@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T],) ######### Estaba escribiendo esta
-
+@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax) 
+@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax)
 #Angulo de referencia
 @constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)   ##hat que definir cual utilizar. Por ahora el 1
 
@@ -118,3 +118,22 @@ sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      ==
 @constraint(model, RampUpConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] <= Generadores[i].Ramp)
 # Rampa dn
 @constraint(model, RampDownConstaint[i in 1:I, t in 2:T], p[i,t] - p[i,t-1] >= -Generadores[i].Ramp)
+
+
+#RESULATDOS
+
+
+#Valores de potencia de cada generador
+JuMP.optimize!(model)
+for t in 1:T
+    println("Generación en T=", t," es para la unidad 1: ", JuMP.value(p[1,t])," para la unidad 2: ", JuMP.value(p[2,t]), "y para la unidad 3: ", JuMP.value(p[3,t]))
+end
+println("Dando un costo total de Operacion de: ", JuMP.objective_value)
+
+
+#Comparación resultados
+#Se hace para comprobar que generacion=demanda
+println("Comparación solución")
+for t in 1:T
+    println(JuMP.value(p[1,t]) + JuMP.value(p[2,t]) + JuMP.value(p[3,t])," = ", Demandas[1][t]+Demandas[2][t]+Demandas[3][t]+Demandas[4][t]+Demandas[5][t]+Demandas[6][t]+Demandas[7][t]+Demandas[8][t]+Demandas[9][t])
+end
