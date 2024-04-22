@@ -137,3 +137,12 @@ println("Comparación solución")
 for t in 1:T
     println(JuMP.value(p[1,t]) + JuMP.value(p[2,t]) + JuMP.value(p[3,t])," = ", Demandas[1][t]+Demandas[2][t]+Demandas[3][t]+Demandas[4][t]+Demandas[5][t]+Demandas[6][t]+Demandas[7][t]+Demandas[8][t]+Demandas[9][t])
 end
+
+#Costos marginales
+println("Costos marginales de cada nodo")
+for n in 1:N
+    for t in 1:T
+        print("Costo marginal en nodo ", n, " en peridodo ", t, ": ")
+        println(JuMP.dual(DCPowerFlowConstraint[n,t]))
+    end
+end
