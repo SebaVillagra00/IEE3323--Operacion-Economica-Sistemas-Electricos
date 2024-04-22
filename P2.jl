@@ -96,15 +96,17 @@ model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 ## Variables
 @variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t. Valor en p.u.
 @variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
+@variable(model, f[1:N, 1:T] >= 0)  # potencia no entregada en el sistema
 
 ## Funcion Objetivo
-@objective(model, Min, multa*(sum(Demandas[n][t] for n in 1:N, t in 1:T) -sum(p[i,t] for i in 1:I, t in 1:T)) )
+@objective(model, Min, sum(Generadores[i].Cost * p[i,t] for i in 1:I, t in 1:T ) + multa*sum(f[n,t] for n in 1:N, t in 1:T))
 
 ## Restricciones
+
 # Equilibrio de Potenica
 #Flujo DC
 @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
-sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]      <= 
+sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]  + f[n,t] == 
 P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
 + P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
 #Flujo en lineas. Se considera o de origen, y d de destino
@@ -112,6 +114,8 @@ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for
 @constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
 #Angulo de referencia
 @constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
+#Definicion de potencia faltante
+@constraint(model, Faltante[t in 1:T], sum(p[i,t] for i in 1:I) == sum(Demandas[n][t] - f[n,t] for n in 1:N))
 
 
 #Restricciones de generadores
