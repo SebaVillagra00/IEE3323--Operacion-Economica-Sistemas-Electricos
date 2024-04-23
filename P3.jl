@@ -182,7 +182,10 @@ println("Dando un costo total de Operacion de: ", JuMP.objective_value(model))
 #Se hace para comprobar que generacion=demanda
 println("Comparación solución")
 for t in 1:T
-    println(JuMP.value(p[1,t]) + JuMP.value(p[2,t]) + JuMP.value(p[3,t])," = ", Demandas[1][t]+Demandas[2][t]+Demandas[3][t]+Demandas[4][t]+Demandas[5][t]+Demandas[6][t]+Demandas[7][t]+Demandas[8][t]+Demandas[9][t])
+    println(JuMP.value(p[1,t]) + JuMP.value(p[2,t]) + JuMP.value(p[3,t]) +
+            JuMP.value(pb[1,t]) + JuMP.value(pb[2,t]) + JuMP.value(pb[3,t])
+            ," = ", Demandas[1][t]+Demandas[2][t]+Demandas[3][t]+Demandas[4][t]+
+            Demandas[5][t]+Demandas[6][t]+Demandas[7][t]+Demandas[8][t]+Demandas[9][t])
 end
 
 #Costos marginales
