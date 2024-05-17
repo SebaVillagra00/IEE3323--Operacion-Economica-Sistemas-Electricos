@@ -60,11 +60,11 @@ archivo = "Case014.xlsx"    # se comienza con el caso mas pequeño
 xf = XLSX.readxlsx(archivo) # leer el archivo excel
 
 # Separar hojas del archivo
-buses = xf["Buses"]
-demandas = xf["Demand"]
-generadores = xf["Generators"]
-lineas = xf["Lines"]
-renovables = xf["Renewables"]
+sheet_buses = xf["Buses"]
+sheet_demandas = xf["Demand"]
+sheet_generadores = xf["Generators"]
+sheet_lineas = xf["Lines"]
+sheet_renovables = xf["Renewables"]
 
 # Definir la función de parada
 # Se crea el DataFrame hasta que se reconozca la entrada "END"
@@ -76,12 +76,12 @@ end
 
 # Crear DataFrames
 # XLSX.gettable(objeto hoja excel, Columnas de tabla, first_row= primera fila a considerar, stop_in_row_function: condicion dejar de leer)
-buses_ref       = DataFrame(XLSX.gettable(buses,"A:E",first_row=1,stop_in_row_function=stop_condition))
-demandaP_ref    = DataFrame(XLSX.gettable(demandas,"A:Y",first_row=2,stop_in_row_function=stop_condition))
-demandaQ_ref    = DataFrame(XLSX.gettable(demandas,"AA:AY",first_row=2,stop_in_row_function=stop_condition))
-generadores_ref = DataFrame(XLSX.gettable(generadores,"A:T",first_row=1,stop_in_row_function=stop_condition))
-lineas_ref      = DataFrame(XLSX.gettable(lineas,"A:G",first_row=1,stop_in_row_function=stop_condition))
-renovables_ref  = DataFrame(XLSX.gettable(renovables,"A:Y",first_row=2,stop_in_row_function=stop_condition))
+buses_ref       = DataFrame(XLSX.gettable(sheet_buses,"A:E",first_row=1,stop_in_row_function=stop_condition))
+demandaP_ref    = DataFrame(XLSX.gettable(sheet_demandas,"A:Y",first_row=2,stop_in_row_function=stop_condition))
+demandaQ_ref    = DataFrame(XLSX.gettable(sheet_demandas,"AA:AY",first_row=2,stop_in_row_function=stop_condition))
+generadores_ref = DataFrame(XLSX.gettable(sheet_generadores,"A:T",first_row=1,stop_in_row_function=stop_condition))
+lineas_ref      = DataFrame(XLSX.gettable(sheet_lineas,"A:G",first_row=1,stop_in_row_function=stop_condition))
+renovables_ref  = DataFrame(XLSX.gettable(sheet_renovables,"A:Y",first_row=2,stop_in_row_function=stop_condition))
 # Notar que se crean 2 DataFrame a partir de la hoja "Demand": Potencia activa (P) y potencia reactiva (Q).
 # Ademas, la fila considerada como inicio de la tabla es la fila 2, ya que la fila 1 solo hace distincion entre estas 2 potencias.
 # Lo mismo ocurre en el DataFrame "renovables_ref".
