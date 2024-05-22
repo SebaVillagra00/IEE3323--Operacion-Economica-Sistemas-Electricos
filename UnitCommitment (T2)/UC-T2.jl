@@ -270,6 +270,8 @@ for b in 1:B
     push!(Baterias, x)
 end
 
+# Actualizado al 22-05 - Sea
+
 ### Problema optimizacion
 model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
