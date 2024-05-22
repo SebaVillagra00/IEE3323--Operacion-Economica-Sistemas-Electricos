@@ -14,16 +14,42 @@ using Gurobi
 using XLSX  # Se agrega para leer archivos .xlsx (Excel)
 
 #Definición de struct: FALTA AGREGAR MAS INSTANCIAS DE CADA STRUCT (seba)  
+
+# Barras
+struct Bus
+    Id::Int64       # Id del Bus
+    Vmax::Float64   # Voltaje maximo [pu]
+    Vmin::Float64   # Voltaje minimo [pu]
+    Gs::Float64
+    Bs::Float64
+end
+
 # Generadores
 struct Gen
-    Id::Int64
-    PotMin::Int64
-    PotMax::Int64
-    Cost::Int64
-    Ramp::Int64 
-    Barra::Int64
+    Id:: Int64              # Este se le puede agregar extra nomas
+    Name::String
+    Barra::Int64    
+    PotMax::Float64
+    PotMin::Float64
+    Qmax::Float64
+    Qmin::Float64
+    Ramp::Int64
+    Sramp::Int64
+    MinUp::Int64
+    MinDn::Int64
+    InitS::Int64
+    InitP::Int64
+    StartCost::Int64
+    FixedCost::Int64
+    VariableCost::Int64
+    Type::String
+    PminFactor::Float64 
+    Qfactor::Float64
+    RampFactor::Float64
+    StartUpCostFactor::Int64
 end
 # Potencias demandadas
+# La demanda la dejaria como un DataFrame y listo
 struct Demanda
     T::Int64
     Barra1::Int64
@@ -37,12 +63,17 @@ struct Demanda
     Barra9::Int64
 end
 # Lineas de transmision
+# IMPORTANTE:   case014.xlsx tiene el inicio y fin como string. case118.xlsx los tiene como int
+#               Por lo tanto, se modifica el archivo case014.xlsx para poder leer de forma automatica
 struct Linea
     Id::Int64
-    Inicio::Int64   # Barra de Inicio
-    Fin::Int64      # Barra de Fin
-    PotMax::Int64   # Potencia maxima a transportrat
-    Imp::Float64 
+    Name::String    
+    Inicio::Int64       # Barra de Inicio
+    Fin::Int64          # Barra de Fin
+    R::Float64          # Resistencia
+    X::Float64          # Reactancia
+    LineCharging::Int64 # (B)
+    PotMax::Int64       # Potencia maxima a transportar
 end
 # Battery Energy Storage System
 struct BESS
@@ -54,6 +85,7 @@ struct BESS
     Efinal::Float64
     Barra::Int64
 end
+# Renewables -> tambien dejarlo como DataFrame
 
 ##  Archivo Excel a leer
 archivo = "Case014.xlsx"    # se comienza con el caso mas pequeño
