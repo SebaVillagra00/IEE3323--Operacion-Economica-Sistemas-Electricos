@@ -28,7 +28,7 @@ end
 struct Gen
     Id:: Int64              # Este se le puede agregar extra nomas
     Name::String
-    Barra::Int64    
+    Bus::Int64    
     PotMax::Float64
     PotMin::Float64
     Qmax::Float64
@@ -142,11 +142,11 @@ renewables = copy(renovables_ref)
 
 #inclusión en variables
 P_base = 100
-T = ncol(demandP)-1      # N° bloques temporales
-N = nrow(buses)        # N° nodos 
-I = nrow(generators)    # N° Generadores
-L = nrow(lines)         # N° Lineas
-#B = nrow(batteries)     # N° BESS
+T = ncol(demandP)-1         # N° bloques temporales
+N = nrow(buses)             # N° nodos 
+I = nrow(generators)        # N° Generadores
+L = nrow(lines)             # N° Lineas
+#B = nrow(batteries)        # N° BESS
 
 # Debugg check
 println("Prueba de numero buses, deberia ser 14: ", N)
@@ -154,24 +154,109 @@ println("Prueba de numero buses, deberia ser 14: ", N)
 # HASTA ACA LLEGUE (SEA -quien mas xdxdxdxd): 17/05 -
 
 # Listas que almacenan los Structs 
+Buses       = []
 Generadores = []
 Demandas    = []
 Lineas      = []
 #Baterias    = []
 
+
 ## Crear los Structs
+
+# Struct Bus
+# struct Bus
+#     Id::Int64       # Id del Bus
+#     Vmax::Float64   # Voltaje maximo [pu]
+#     Vmin::Float64   # Voltaje minimo [pu]
+#     Gs::Float64
+#     Bs::Float64
+# end
+for i in 1:N
+    x = Bus(
+        lines[i,i], # 1- Id
+        lines[i,2], # 2- Vmax [pu]
+        lines[i,3], # 3- Vmin [pu]
+        lines[i,4], # 4- Gs
+        lines[i,5]) # 8- Bs   
+    push!(Lineas, x)
+end
+
 # Struct Generadores
+# struct Gen
+#     (1)Id:: Int64              
+#     (2)Name::String
+#     (3)Bus::Int64    
+#     (4)PotMax::Float64
+#     (5)PotMin::Float64
+#     (6)Qmax::Float64
+#     (7)Qmin::Float64
+#     (8)Ramp::Int64
+#     (9)Sramp::Int64
+#     (10)MinUp::Int64
+#     (11)MinDn::Int64
+#     (12)InitS::Int64
+#     (13)InitP::Int64
+#     (14)StartCost::Int64
+#     (15)FixedCost::Int64
+#     (16)VariableCost::Int64
+#     (17)Type::String
+#     (18)PminFactor::Float64 
+#     (19)Qfactor::Float64
+#     (20)RampFactor::Float64
+#     (21)StartUpCostFactor::Int64
+# end
 for i in 1:I
-    x = Gen(generators[i,1],generators[i,2],generators[i,3],generators[i,4],generators[i,5],generators[i,6])
+    x = Gen(
+        generators[i,i],    # 1- Id
+        generators[i,1],    # 2- Name
+        generators[i,2],    # 3- Bus
+        generators[i,3],    # 4- Pmax
+        generators[i,4],    # 5- Pmin
+        generators[i,5],    # 6- Qmax
+        generators[i,6],    # 7- Qmin
+        generators[i,7],    # 8- Ramp [Mw/h]
+        generators[i,8],    # 9- Sramp [Mw]
+        generators[i,9],    # 10- MinUp
+        generators[i,10],   # 11- MinDn
+        generators[i,11],   # 12- InitS
+        generators[i,12],   # 13- InitP
+        generators[i,13],   # 14- StartCost
+        generators[i,14],   # 15- FixedCost
+        generators[i,15],   # 16- VariableCost
+        generators[i,16],   # 17- Type
+        generators[i,17],   # 18- PminFactor
+        generators[i,18],   # 19- Qfactor
+        generators[i,19],   # 20- RampFactor
+        generators[i,20])   # 21- StartUpCostFactor
     push!(Generadores, x)
 end
 ## println(Generadores[1].PotMax) ejemplo de como obtener un prámetro en particular
 
+# Struct Linea
+# struct Linea
+#     Id::Int64
+#     Name::String    
+#     Inicio::Int64       # Barra de Inicio
+#     Fin::Int64          # Barra de Fin
+#     R::Float64          # Resistencia
+#     X::Float64          # Reactancia
+#     LineCharging::Int64 # (B)
+#     PotMax::Int64       # Potencia maxima a transportar
+# end
 for i in 1:L
-    x = Linea(lines[i,1],lines[i,2],lines[i,3],lines[i,4],lines[i,5])   # Esta linea crea el struct i
+    x = Linea(
+        lines[i,i], # 1- Id
+        lines[i,1], # 2- Name 
+        lines[i,2], # 3- StartBus
+        lines[i,3], # 4- EndBus
+        lines[i,4], # 5- Resistance
+        lines[i,5], # 6- Reactance
+        lines[i,6], # 7- LineCharging(B)
+        lines[i,7]) # 8- MaxFlow [Mw]   
     push!(Lineas, x)
 end
 
+# Struct demanda (quizas quitarlo)
 for i in 1:N
     x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7]]
     push!(Demandas, x)
