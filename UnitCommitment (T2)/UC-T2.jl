@@ -25,7 +25,7 @@ struct Bus
 end
 
 # Generadores
-struct Gen
+struct Generador
     Id:: Int64              # Este se le puede agregar extra nomas
     Name::String
     Bus::Int64    
@@ -155,7 +155,7 @@ println("Prueba de numero buses, deberia ser 14: ", N)
 
 # Listas que almacenan los Structs 
 Buses       = []
-Generadores = []
+Gen         = []
 Demandas    = []
 Lineas      = []
 #Baterias    = []
@@ -206,7 +206,7 @@ end
 #     (21)StartUpCostFactor::Int64
 # end
 for i in 1:I
-    x = Gen(
+    x = Generador(
         generators[i,i],    # 1- Id
         generators[i,1],    # 2- Name
         generators[i,2],    # 3- Bus
@@ -270,28 +270,44 @@ for b in 1:B
     push!(Baterias, x)
 end
 
-# Actualizado al 22-05 - Sea
 
 ### Problema optimizacion
 model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 
 ## Variables
-@variable(model, p[1:I, 1:T] >= 0)  # potencia de generador i en tiempo t. Valor en p.u.
+
+# Variables Economic Dispatch
+@variable(model, p[1:I, 1:T] >= 0)  # Potencia activa de generador i en tiempo t. Valor en p.u.
 @variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
-@variable(model, pb[1:B, 1:T])      # flujo de potencia del BESS b en tiempo t
-@variable(model, e[1:B,1:T] >=0)        # energia almacenada en el BESS e en tiempo t
+
+# Variables nuevas (UC)
+# No se utiliza potencia reactiva: Aproximacion DC
+#@variable(model, q[1:I, 1:T])       # Potencia reactiva de generador i en tiempo t. Valor en p.u. (puede ser < 0)
+@variable(model, u[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Indica encendido de gen i en t.
+@variable(model, v[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Indica apagado de gen i en t.
+@variable(model, w[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Estado ON(1)/OFF(0) de gen i en t.
+
+# Variables BESS (no se utilizan)
+#@variable(model, pb[1:B, 1:T])      # flujo de potencia del BESS b en tiempo t
+#@variable(model, e[1:B,1:T] >=0)    # energia almacenada en el BESS e en tiempo t
 
 ## Funcion Objetivo
-@objective(model, Min, sum(Generadores[i].Cost * p[i,t] for i in 1:I, t in 1:T ))
+@objective(model, Min, sum(Gen[i].VariableCostCost * p[i,t] +  Gen[i].FixedCost * w[i,t] + Gen[i].StartCost * u[i,t] for i in 1:I, t in 1:T ))
 
-## Restricciones
+### Restricciones
+
 # Equilibrio de Potenica
-#Flujo DC
+#Flujo DC   
+# IDEA: ahora los datos traen R y X. Agregaria Imp como atributo adicional al momento de generar cada
+#       estructura LINEA. De esta forma se mantiene esta restriccion
+
+# Demanda Potencia Activa
 @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
 sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]  
 + sum(pb[b,t] for b in 1:B if Baterias[b].Barra == n)    == 
 P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
 + P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
+
 #Flujo en lineas. Se considera o de origen, y d de destino
 @constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
 @constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
@@ -299,15 +315,33 @@ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for
 @constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
 
 
-#Restricciones de generadores
-# Potencia maxima
-@constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= Generadores[i].PotMax)
-# Potencia minima
-@constraint(model, PMinConstraint[i in 1:I, t in 1:T], Generadores[i].PotMin <= p[i,t])
+### Restricciones de generadores
+
+## Potencias Activas y reactivas
+# Potencia Activa maxima
+@constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= w[i,t]*Gen[i].PotMax)
+# Potencia Activa minima
+@constraint(model, PMinConstraint[i in 1:I, t in 1:T], w[i,t]*Gen[i].PotMin <= p[i,t])
+
+# Potencia Reactiva maxima
+#@constraint(model, QMaxConstraint[i in 1:I, t in 1:T], q[i,t] <= Gen[i].QMax)
+# Potencia Reactiva minima
+#@constraint(model, QMinConstraint[i in 1:I, t in 1:T], Gen[i].QMin <= q[i,t])
+
+############# actualizacion 22-05 (sea)
+#               ARRIBA hay que modificar el equilibrio de demandas y saturacion de lineas
+
+## Rampas
 # Rampa up
 @constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Generadores[i].Ramp)
 # Rampa dn
 @constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= -Generadores[i].Ramp)
+
+## Estados Binarios
+
+## Tiempo minimo de encendido
+
+## Tiempo minimo de apagado
 
 # Restricciones de BESS
 # Energia maxima
@@ -323,6 +357,7 @@ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for
 # Dinamica BESS
 @constraint(model, DynamicBESS[b in 1:B, t in 2:T], e[b,t] == e[b,t-1] - pb[b,t])
 
+#############################################################
 
 #RESULATDOS
 
