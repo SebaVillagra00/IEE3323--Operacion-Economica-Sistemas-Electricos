@@ -283,9 +283,9 @@ model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 # Variables nuevas (UC)
 # No se utiliza potencia reactiva: Aproximacion DC
 #@variable(model, q[1:I, 1:T])       # Potencia reactiva de generador i en tiempo t. Valor en p.u. (puede ser < 0)
-@variable(model, u[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Indica encendido de gen i en t.
-@variable(model, v[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Indica apagado de gen i en t.
-@variable(model, w[1:I, 1:T])       # AGREGAR NATURALEZA {0,1}. Estado ON(1)/OFF(0) de gen i en t.
+@variable(model, u[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica encendido de gen i en t.
+@variable(model, v[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica apagado de gen i en t.
+@variable(model, w[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Estado ON(1)/OFF(0) de gen i en t.
 
 # Variables BESS (no se utilizan)
 #@variable(model, pb[1:B, 1:T])      # flujo de potencia del BESS b en tiempo t
@@ -333,15 +333,20 @@ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for
 
 ## Rampas
 # Rampa up
-@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Generadores[i].Ramp)
+@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Gen[i].Ramp + Gen.Sramp[i]*u[i,t])
 # Rampa dn
-@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= -Generadores[i].Ramp)
+@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= -Generadores[i].Ramp - Gen.Sramp[i]*v[u,t])
 
 ## Estados Binarios
+@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) = (w[i,t] - w[i,t-1]))
+#@constraint(model, BinaryInitial[i in 1:I], (w[i,1] = State0[i]))   # Condicion inicial, por ahora libre
 
 ## Tiempo minimo de encendido
 
 ## Tiempo minimo de apagado
+
+
+
 
 # Restricciones de BESS
 # Energia maxima
