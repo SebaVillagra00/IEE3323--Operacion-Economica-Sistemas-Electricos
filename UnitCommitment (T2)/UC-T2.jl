@@ -26,7 +26,6 @@ end
 
 # Generadores
 struct Generador
-    Id:: Int64              # Este se le puede agregar extra nomas
     Name::String
     Bus::Int64    
     PotMax::Float64
@@ -66,7 +65,6 @@ end
 # IMPORTANTE:   case014.xlsx tiene el inicio y fin como string. case118.xlsx los tiene como int
 #               Por lo tanto, se modifica el archivo case014.xlsx para poder leer de forma automatica
 struct Linea
-    Id::Int64
     Name::String    
     Inicio::Int64       # Barra de Inicio
     Fin::Int64          # Barra de Fin
@@ -207,27 +205,26 @@ end
 # end
 for i in 1:I
     x = Generador(
-        generators[i,i],    # 1- Id
-        generators[i,1],    # 2- Name
-        generators[i,2],    # 3- Bus
-        generators[i,3],    # 4- Pmax
-        generators[i,4],    # 5- Pmin
-        generators[i,5],    # 6- Qmax
-        generators[i,6],    # 7- Qmin
-        generators[i,7],    # 8- Ramp [Mw/h]
-        generators[i,8],    # 9- Sramp [Mw]
-        generators[i,9],    # 10- MinUp
-        generators[i,10],   # 11- MinDn
-        generators[i,11],   # 12- InitS
-        generators[i,12],   # 13- InitP
-        generators[i,13],   # 14- StartCost
-        generators[i,14],   # 15- FixedCost
-        generators[i,15],   # 16- VariableCost
-        generators[i,16],   # 17- Type
-        generators[i,17],   # 18- PminFactor
-        generators[i,18],   # 19- Qfactor
-        generators[i,19],   # 20- RampFactor
-        generators[i,20])   # 21- StartUpCostFactor
+        generators[i,1],    # 1- Name
+        generators[i,2],    # 2- Bus
+        generators[i,3],    # 3- Pmax
+        generators[i,4],    # 4- Pmin
+        generators[i,5],    # 5- Qmax
+        generators[i,6],    # 6- Qmin
+        generators[i,7],    # 7- Ramp [Mw/h]
+        generators[i,8],    # 8- Sramp [Mw]
+        generators[i,9],    # 9- MinUp
+        generators[i,10],   # 10- MinDn
+        generators[i,11],   # 11- InitS
+        generators[i,12],   # 12- InitP
+        generators[i,13],   # 13- StartCost
+        generators[i,14],   # 14- FixedCost
+        generators[i,15],   # 15- VariableCost
+        generators[i,16],   # 16- Type
+        generators[i,17],   # 17- PminFactor
+        generators[i,18],   # 18- Qfactor
+        generators[i,19],   # 19- RampFactor
+        generators[i,20])   # 20- StartUpCostFactor
     push!(Generadores, x)
 end
 ## println(Generadores[1].PotMax) ejemplo de como obtener un prámetro en particular
@@ -245,14 +242,13 @@ end
 # end
 for i in 1:L
     x = Linea(
-        lines[i,i], # 1- Id
-        lines[i,1], # 2- Name 
-        lines[i,2], # 3- StartBus
-        lines[i,3], # 4- EndBus
-        lines[i,4], # 5- Resistance
-        lines[i,5], # 6- Reactance
-        lines[i,6], # 7- LineCharging(B)
-        lines[i,7]) # 8- MaxFlow [Mw]   
+        lines[i,1], # 1- Name 
+        lines[i,2], # 2- StartBus
+        lines[i,3], # 3- EndBus
+        lines[i,4], # 4- Resistance
+        lines[i,5], # 5- Reactance
+        lines[i,6], # 6- LineCharging(B)
+        lines[i,7]) # 7- MaxFlow [Mw]   
     push!(Lineas, x)
 end
 
