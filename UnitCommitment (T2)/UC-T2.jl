@@ -171,7 +171,7 @@ Lineas      = []
 # end
 for i in 1:N
     x = Bus(
-        lines[i,i], # 1- Id
+        lines[i,1], # 1- Id
         lines[i,2], # 2- Vmax [pu]
         lines[i,3], # 3- Vmin [pu]
         lines[i,4], # 4- Gs
