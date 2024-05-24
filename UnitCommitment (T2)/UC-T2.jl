@@ -32,21 +32,22 @@ struct Generador
     PotMin::Float64
     Qmax::Float64
     Qmin::Float64
-    Ramp::Int64
-    Sramp::Int64
-    MinUp::Int64
-    MinDn::Int64
-    InitS::Int64
-    InitP::Int64
-    StartCost::Int64
-    FixedCost::Int64
-    VariableCost::Int64
-    Type::String
+    Ramp::Float64
+    Sramp::Float64
+    MinUp::Float64
+    MinDn::Float64
+    InitS::Float64
+    InitP::Float64
+    StartCost::Float64
+    FixedCost::Float64
+    VariableCost::Float64
+    Tech::String
     PminFactor::Float64 
     Qfactor::Float64
     RampFactor::Float64
     StartUpCostFactor::Int64
 end
+
 # Potencias demandadas
 # La demanda la dejaria como un DataFrame y listo
 struct Demanda
@@ -61,6 +62,7 @@ struct Demanda
     Barra8::Int64
     Barra9::Int64
 end
+
 # Lineas de transmision
 # IMPORTANTE:   case014.xlsx tiene el inicio y fin como string. case118.xlsx los tiene como int
 #               Por lo tanto, se modifica el archivo case014.xlsx para poder leer de forma automatica
@@ -130,9 +132,9 @@ renovables_ref  = DataFrame(XLSX.gettable(sheet_renovables,"A:Y",first_row=2,sto
 #batteries       = copy(batteries_ref)
 #######################################################
 
-# Crear copias
+# Crear copias (aparentemente buena practica)
 buses = copy(buses_ref)
-demandP = copy(demandaP_ref)
+demandP = copy(demandaP_ref[:,2:25])
 demandQ = copy(demandaQ_ref)
 generators = copy(generadores_ref)
 lines = copy(lineas_ref)
@@ -158,7 +160,6 @@ Demandas    = []
 Lineas      = []
 #Baterias    = []
 
-
 ## Crear los Structs
 
 # Struct Bus
@@ -171,12 +172,12 @@ Lineas      = []
 # end
 for i in 1:N
     x = Bus(
-        lines[i,1], # 1- Id
-        lines[i,2], # 2- Vmax [pu]
-        lines[i,3], # 3- Vmin [pu]
-        lines[i,4], # 4- Gs
-        lines[i,5]) # 8- Bs   
-    push!(Lineas, x)
+        buses[i,1], # 1- Id
+        buses[i,2], # 2- Vmax [pu]
+        buses[i,3], # 3- Vmin [pu]
+        buses[i,4], # 4- Gs
+        buses[i,5]) # 8- Bs   
+    push!(Buses, x)
 end
 
 # Struct Generadores
@@ -203,7 +204,9 @@ end
 #     (20)RampFactor::Float64
 #     (21)StartUpCostFactor::Int64
 # end
+
 for i in 1:I
+    println("Generador", i)
     x = Generador(
         generators[i,1],    # 1- Name
         generators[i,2],    # 2- Bus
@@ -225,7 +228,7 @@ for i in 1:I
         generators[i,18],   # 18- Qfactor
         generators[i,19],   # 19- RampFactor
         generators[i,20])   # 20- StartUpCostFactor
-    push!(Generadores, x)
+    push!(Gen, x)
 end
 ## println(Generadores[1].PotMax) ejemplo de como obtener un prámetro en particular
 
@@ -252,20 +255,27 @@ for i in 1:L
     push!(Lineas, x)
 end
 
+println("Demanda nodo 14, hora 2: ", demandP[14,2])
+println("Size de demandaP_ref: ", size(demandaP_ref))
+println("Size de demandP: ", size(demandP))
+
 # Struct demanda (quizas quitarlo)
-for i in 1:N
-    x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7]]
-    push!(Demandas, x)
-end
-#println(Lineas[4].Imp)
+# for i in 1:N
+#     x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7]]
+#     push!(Demandas, x)
+# end
 
 # Crear Structs BESS
-for b in 1:B
-    x = BESS(batteries[b,1],batteries[b,2],batteries[b,3],batteries[b,4],
-            batteries[b,5],batteries[b,6],batteries[b,7])
-    push!(Baterias, x)
-end
+# for b in 1:B
+#     x = BESS(batteries[b,1],batteries[b,2],batteries[b,3],batteries[b,4],
+#             batteries[b,5],batteries[b,6],batteries[b,7])
+#     push!(Baterias, x)
+# end
 
+
+####################################################################
+#               MODELO OPTIMIZACION
+####################################################################
 
 ### Problema optimizacion
 model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
@@ -288,28 +298,23 @@ model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
 #@variable(model, e[1:B,1:T] >=0)    # energia almacenada en el BESS e en tiempo t
 
 ## Funcion Objetivo
-@objective(model, Min, sum(Gen[i].VariableCostCost * p[i,t] +  Gen[i].FixedCost * w[i,t] + Gen[i].StartCost * u[i,t] for i in 1:I, t in 1:T ))
+@objective(model, Min, sum(Gen[i].VariableCost * p[i,t] +  Gen[i].FixedCost * w[i,t] + Gen[i].StartCost * u[i,t] for i in 1:I, t in 1:T ))
 
 ### Restricciones
 
-# Equilibrio de Potenica
-#Flujo DC   
-# IDEA: ahora los datos traen R y X. Agregaria Imp como atributo adicional al momento de generar cada
-#       estructura LINEA. De esta forma se mantiene esta restriccion
-
-# Demanda Potencia Activa
+# Equilibrio de Potenica (APROXIMACION: Flujo DC  --> Demanda Potencia Activa)
 @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
-sum(p[i,t] for i in 1:I if Generadores[i].Barra == n) - Demandas[n][t]  
-+ sum(pb[b,t] for b in 1:B if Baterias[b].Barra == n)    == 
-P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
-+ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
+sum(p[i,t] for i in 1:I if Gen[i].Bus == n) - demandP[n,t]      == 
+P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
++ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
+
+# + sum(pb[b,t] for b in 1:B if Baterias[b].Barra == n) | Al lado izquierdo de la ecuación (baterias)
 
 #Flujo en lineas. Se considera o de origen, y d de destino
-@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
-@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].Imp * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
+@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
+@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
 #Angulo de referencia
 @constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
-
 
 ### Restricciones de generadores
 
@@ -324,44 +329,53 @@ P_base*sum( (1/Lineas[l].Imp) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for
 # Potencia Reactiva minima
 #@constraint(model, QMinConstraint[i in 1:I, t in 1:T], Gen[i].QMin <= q[i,t])
 
-############# actualizacion 22-05 (sea)
-#               ARRIBA hay que modificar el equilibrio de demandas y saturacion de lineas
-
 ## Rampas
 # Rampa up
-@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Gen[i].Ramp + Gen.Sramp[i]*u[i,t])
+@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Gen[i].Ramp + Gen[i].Sramp*u[i,t])
 # Rampa dn
-@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= -Generadores[i].Ramp - Gen.Sramp[i]*v[u,t])
+@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= 0-Gen[i].Ramp - Gen[i].Sramp*v[i,t])
 
 ## Estados Binarios
-@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) = (w[i,t] - w[i,t-1]))
+@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) == (w[i,t] - w[i,t-1]))
 #@constraint(model, BinaryInitial[i in 1:I], (w[i,1] = State0[i]))   # Condicion inicial, por ahora libre
 
-## Tiempo minimo de encendido
-
+## Tiempo minimo de encendido: sumo todos los x dentro de la ventana desde t=1 hasta el instante enterior al encendido
+@constraint(model, MinUpTime[i in 1:I, t in 2:T], sum(w[i,k] for k in 1:(t-1) if k >= t-Gen[i].MinUp) >= v[i,t]*Gen[i].MinUp)
 ## Tiempo minimo de apagado
-
+@constraint(model, MinDnTime[i in 1:I, t in 2:T], sum((1-w[i,k]) for k in 1:(t-1) if k >= t-Gen[i].MinDn) >= u[i,t]*Gen[i].MinDn)
 
 
 
 # Restricciones de BESS
 # Energia maxima
-@constraint(model, EnergyMax[b in 1:B, t in 1:T], e[b,t] <= (Baterias[b].PotMax)*(Baterias[b].Duration))
+#@constraint(model, EnergyMax[b in 1:B, t in 1:T], e[b,t] <= (Baterias[b].PotMax)*(Baterias[b].Duration))
 # Potencia maxima descarga
-@constraint(model, PMaxBessDischarge[b in 1:B, t in 1:T], pb[b,t] <= Baterias[b].PotMax)
+#@constraint(model, PMaxBessDischarge[b in 1:B, t in 1:T], pb[b,t] <= Baterias[b].PotMax)
 # Potencia maxima carga
-@constraint(model, PMaxBessCharge[b in 1:B, t in 1:T], pb[b,t] >= -1*(Baterias[b].PotMax))
-# Imposibilidad de generacion - E inicial
-@constraint(model, Estart[b in 1:B], e[b,1] == (Baterias[b].Estart)*(Baterias[b].PotMax)*(Baterias[b].Duration))
+#@constraint(model, PMaxBessCharge[b in 1:B, t in 1:T], pb[b,t] >= -1*(Baterias[b].PotMax))
+## Imposibilidad de generacion - E inicial
+#@constraint(model, Estart[b in 1:B], e[b,1] == (Baterias[b].Estart)*(Baterias[b].PotMax)*(Baterias[b].Duration))
 # Imposibilidad de generacion - E final
-@constraint(model, Efinal[b in 1:B], e[b,T] == (Baterias[b].Efinal)*(Baterias[b].PotMax)*(Baterias[b].Duration))
+#@constraint(model, Efinal[b in 1:B], e[b,T] == (Baterias[b].Efinal)*(Baterias[b].PotMax)*(Baterias[b].Duration))
 # Dinamica BESS
-@constraint(model, DynamicBESS[b in 1:B, t in 2:T], e[b,t] == e[b,t-1] - pb[b,t])
+#@constraint(model, DynamicBESS[b in 1:B, t in 2:T], e[b,t] == e[b,t-1] - pb[b,t])
 
 #############################################################
 
-#RESULATDOS
 
+################################################ ACTUALIZADO 24-05 (00:10 AM) -SEA ################################
+### Notas:
+#   - Siento que hay que agregar BinaryState0 -> Con los resultados se pueden analizar incongruencias
+#   - Por lo mismo, las constraints de MinUpTime y MinDnTime no me terminan de convencer
+#   - SI O SI, hay que fijar p[r,t] == gr[t], es decir, las potencias generadas por renovables estan
+#       fijas. HINT: los renovables están al final de la tabla de generadores. 
+
+# constraint[i in (I-a):I, t in 1:T], p[i,t] == renewable[i,t] | una wea asi
+
+##############################################################
+
+
+### RESULATDOS
 
 #Valores de potencia de cada generador
 JuMP.optimize!(model)
