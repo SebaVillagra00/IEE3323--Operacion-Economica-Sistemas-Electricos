@@ -142,7 +142,7 @@ renewables = copy(renovables_ref)
 
 #inclusión en variables
 P_base = 100
-T = ncol(demandP)-1         # N° bloques temporales
+T = ncol(demandP)           # N° bloques temporales
 N = nrow(buses)             # N° nodos 
 I = nrow(generators)        # N° Generadores
 L = nrow(lines)             # N° Lineas
