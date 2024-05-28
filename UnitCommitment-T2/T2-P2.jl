@@ -35,7 +35,7 @@ min_k_wind = 14.70
 max_k_wind = 30.92
 min_k_sun = 10.20
 max_k_sun = 14.02
-sim_wind = []
+sim_wind = zeros(1,100)
 sim_sun = []
 sim_sis = [] 
 
@@ -72,10 +72,12 @@ for k in 1:iteraciones
         end
     end 
     #forecasts
-    append!(sim_wind,wind_tot)
+    println(wind_tot)
+    sim_wind[k] = wind_tot
     #sun_tot
     #ren_tot = sun_tot + wind_tot
+    #print(wind_tot)
 
 end
-horas = 1:24
-#plot!(horas, wind_tot, title="Predicciones eolicas")
+#horas = 1:24
+#plot(horas,sim_wind , title="Predicciones eolicas")
