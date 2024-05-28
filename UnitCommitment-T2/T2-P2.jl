@@ -35,18 +35,24 @@ max_k_sun = 14.02
 
 # 40 eolicas 20 solares
 forecasts = zeros(60,24)
-println(forecasts)
+#println(forecasts)
 for i in 1:60 
     for j in 1:24
-        mu = 10     #acá tomar valor del excel
-        if (1==1)   #acá incluir si es solar o eólica
-            sigma = mu*(max_k_wind-min_k_wind)/(24-1)
+        #println(renewables[i,1+j] )
+        mu = renewables[i,1+j]     #acá tomar valor del excel
+        if (i<=40)   #acá incluir si es solar o eólica
+            sigma = mu*j*(max_k_wind-min_k_wind)/(24-1)
         else
-            sigma = mu*(max_k_sun-min_k_sun)/(24-1)
+            sigma = mu*j*(max_k_sun-min_k_sun)/(24-1)
         end
-        sim_norm = rand(Normal(mu,sigma))*1000
-        forecasts[i,j] = round(sim_norm)/1000
+        sim_norm = mu + rand(Normal(0,sigma)) #   Eventualmente se podría borrar la aproximación
+        if (sim_norm<0)
+            forecasts[i,j] = 0 
+        else
+        forecasts[i,j] = sim_norm 
+        end      
     end
 end   
 
-println(forecasts)
+#println(forecasts)
+forecasts
