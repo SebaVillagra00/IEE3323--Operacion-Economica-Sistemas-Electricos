@@ -40,7 +40,7 @@ max_k_sun = 14.02
 horas_eol = []
 horas_sun = []
 horas_sist = []
-for _ in 1:2
+for _ in 1:24
     push!(horas_eol, 0)
     push!(horas_sun, 0)
     push!(horas_sist, 0)
@@ -50,14 +50,14 @@ end
 esc_eol = []
 esc_sun = []
 esc_sist = []
-for _ in 1:2
+for _ in 1:24
     push!(esc_eol, 0)
     push!(esc_sun, 0)
     push!(esc_sist, 0)
 end
 
 for e in 1:100    
-    for t in 1:2
+    for t in 1:24
         tot_sun=0
         tot_eol=0
         for g in 1:60
@@ -87,7 +87,7 @@ for e in 1:100
     global horas_sun=hcat(horas_sun,esc_sun)
     global horas_sist=hcat(horas_sist,esc_sist)
 end
-println(Float64.(horas_eol))
+#println(Float64.(horas_eol))
 
-#horas = 1:24
-#plot!(horas, Float64.(horas_eol), title="Predicciones eolicas")
+horas = 1:24
+plot!(horas, Float64.(horas_eol), title="Predicciones eolicas")
