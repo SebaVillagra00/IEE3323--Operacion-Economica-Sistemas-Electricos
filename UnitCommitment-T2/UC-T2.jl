@@ -146,6 +146,7 @@ T = ncol(demandP)           # N° bloques temporales
 N = nrow(buses)             # N° nodos 
 I = nrow(generators)        # N° Generadores
 L = nrow(lines)             # N° Lineas
+R = nrow(renewables)        # N° Renovables
 #B = nrow(batteries)        # N° BESS
 
 # Debugg check
@@ -323,11 +324,8 @@ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l
 @constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= w[i,t]*Gen[i].PotMax)
 # Potencia Activa minima
 @constraint(model, PMinConstraint[i in 1:I, t in 1:T], w[i,t]*Gen[i].PotMin <= p[i,t])
-
-# Potencia Reactiva maxima
-#@constraint(model, QMaxConstraint[i in 1:I, t in 1:T], q[i,t] <= Gen[i].QMax)
-# Potencia Reactiva minima
-#@constraint(model, QMinConstraint[i in 1:I, t in 1:T], Gen[i].QMin <= q[i,t])
+# Potencia Renewables (condicionado a meteorologia)
+@constraint(model, RenewableMax[i in (I-R+1):I, t in 1:T], p[i,t] <= renewables[i-(I-R),t+1])
 
 ## Rampas
 # Rampa up
@@ -375,10 +373,14 @@ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l
 ##############################################################
 
 
+
 ### RESULATDOS
 
 #Valores de potencia de cada generador
 JuMP.optimize!(model)
+
+println("PRUEBA")
+println(JuMP.value(p[6,4]))
 for t in 1:T
     println("Generación en T=", t," es para la unidad 1: ", JuMP.value(p[1,t])," para la unidad 2: ", JuMP.value(p[2,t]), " y para la unidad 3: ", JuMP.value(p[3,t]))
 end
