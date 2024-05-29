@@ -46,6 +46,7 @@ for _ in 1:24
     push!(horas_sist, 0)
 end
 
+
 #Cada uno de estos vectores incluye los 100 escenarios para una hora dada
 esc_eol = []
 esc_sun = []
@@ -56,12 +57,13 @@ for _ in 1:24
     push!(esc_sist, 0)
 end
 
-for e in 1:100    
+for e in 2:100    
     for t in 1:24
         tot_sun=0
         tot_eol=0
+        tot_sist=0
         for g in 1:60
-            mu = renewables[g,1+t]                      #acá toma valor del excel
+            mu = renewables[g,t+1]                      #acá toma valor del excel
             if (g<=40)                                  #acá revisa si es solar o eólica
                 m=(max_k_wind-min_k_wind)/(24-1)/100
                 sigma = mu*(t*m+min_k_wind/100-m)
@@ -77,17 +79,24 @@ for e in 1:100
                 tot_eol+=sim_norm
             else
                 tot_sun+=sim_norm
-            end  
+            end
+            tot_sist+=sim_norm  
         end
         esc_eol[t]=tot_eol
         esc_sun[t]=tot_sun
-        esc_sist[t]=tot_eol+tot_sun
+        esc_sist[t]=tot_sist
     end
     global horas_eol = hcat(horas_eol,esc_eol)
-    global horas_sun=hcat(horas_sun,esc_sun)
-    global horas_sist=hcat(horas_sist,esc_sist)
+    global horas_sun = hcat(horas_sun,esc_sun)
+    global horas_sist = hcat(horas_sist,esc_sist)
 end
-#println(Float64.(horas_eol))
+
+pl_eol = Float64.(horas_eol[:, 1:end .!= 1])
+pl_sun = Float64.(horas_sun[:, 1:end .!= 1])
+pl_sist = Float64.(horas_sist[:, 1:end .!= 1])
+#println(Float64.(horas_eol[:, 1:end .!= 1]))
 
 horas = 1:24
-plot!(horas, Float64.(horas_eol), title="Predicciones eolicas")
+plot!(horas, pl_eol, title="Predicciones Eolicas", legend = false)
+#plot!(horas, pl_sun, title="Predicciones Solares", legend = false)
+#plot!(horas, pl_sist, title="Predicciones Totales", legend = false)
