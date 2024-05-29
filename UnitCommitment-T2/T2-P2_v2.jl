@@ -57,7 +57,7 @@ for _ in 1:24
     push!(esc_sist, 0)
 end
 
-for e in 2:100    
+for e in 1:100    
     for t in 1:24
         tot_sun=0
         tot_eol=0
@@ -95,8 +95,49 @@ pl_eol = Float64.(horas_eol[:, 1:end .!= 1])
 pl_sun = Float64.(horas_sun[:, 1:end .!= 1])
 pl_sist = Float64.(horas_sist[:, 1:end .!= 1])
 #println(Float64.(horas_eol[:, 1:end .!= 1]))
+#println(pl_eol)
 
 horas = 1:24
-plot!(horas, pl_eol, title="Predicciones Eolicas", legend = false)
-#plot!(horas, pl_sun, title="Predicciones Solares", legend = false)
-#plot!(horas, pl_sist, title="Predicciones Totales", legend = false)
+
+
+
+
+mean_eol = []
+mean_sun = []
+mean_sist = []
+for _ in 1:24
+    push!(mean_eol, 0)
+    push!(mean_sun, 0)
+    push!(mean_sist, 0)
+end
+
+    
+for t in 1:24
+    tot_sun=0
+    tot_eol=0
+    tot_sist=0
+    for g in 1:60
+        mu = renewables[g,t+1]                      #acá toma valor del excel
+        if (g<=40)
+            tot_eol+=mu
+        else
+            tot_sun+=mu
+        end
+        tot_sist+=mu  
+    end
+    mean_eol[t]=tot_eol
+    mean_sun[t]=tot_sun
+    mean_sist[t]=tot_sist
+end
+#print(Float64.(mean_eol))
+
+#plot(horas, pl_eol, title = "Predicciones Eolicas", legend = false)
+#plot!(horas, Float64.(mean_eol), title="Prediccione Original Eolicas", legend = false, lw=3, lc=:black)
+
+#plot!(horas, pl_sun, title = "Predicciones Solares", legend = false)
+#plot!(horas, Float64.(mean_sun), title="Prediccione Original Solar", legend = false, lw=3, lc=:black)
+
+plot!(horas, pl_sist, title = "Predicciones Totales", legend = false)
+plot!(horas, Float64.(mean_sist), title="Prediccione Original Sistémico", legend = false, lw=3, lc=:black)
+ylims!(0, 4000)
+xlims!(1, 24)
