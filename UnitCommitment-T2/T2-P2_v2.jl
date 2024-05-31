@@ -5,7 +5,7 @@ using JuMP , HiGHS      # https://jump.dev/JuMP.jl/stable/manual/models/
 using Gurobi
 using XLSX  # Se agrega para leer archivos .xlsx (Excel)
 
-#Random.seed!(1234) #para que las simulaciones de prueba sean consistentes
+Random.seed!(1234) #para que las simulaciones de prueba sean consistentes
 
 #Lectura de excel
 archivo = "Case118.xlsx"    # se comienza con el caso mas pequeño
@@ -185,30 +185,33 @@ end
 
 #=
 plot(horas, pl_eol, title = "Predicciones Eolicas", legend = false, palette = :Accent_5)
-plot!(horas, Float64.(mean_eol),  legend = false, lw=3, lc=:black)
-plot!(horas, Float64.(IC90upE),  legend = false, lw=2, lc=:red)
-plot!(horas, Float64.(IC90downE), legend = false, lw=2, lc=:red)
-plot!(horas, Float64.(IC99upE), legend = false, lw=2, lc=:lightgreen)
-plot!(horas, Float64.(IC99downE), legend = false, lw=2, lc=:lightgreen)
+plot!(horas, Float64.(mean_eol),  legend = false, lw=3, lc=:red)
+plot!(horas, Float64.(IC90upE),  legend = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC90downE), legend = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC99upE), legend = false, lw=2, lc=:gray)
+plot!(horas, Float64.(IC99downE), legend = false, lw=2, lc=:gray)
+savefig("grafico_eolico.pdf")
 =#
 
-
+#=
 plot!(horas, pl_sun, title = "Predicciones Solares", legend = false, palette = :Accent_5)
 plot!(horas, Float64.(mean_sun),  legend = false, lw=3, lc=:red)
 plot!(horas, Float64.(IC90upS),  legend = false, lw=2, lc=:black)
 plot!(horas, Float64.(IC90downS),  legend = false, lw=2, lc=:black)
 plot!(horas, Float64.(IC99upS),  legend = false, lw=2, lc=:gray)
 plot!(horas, Float64.(IC99downS), legend = false, lw=2, lc=:gray)
-
-
-#=
-plot!(horas, pl_sist, title = "Predicciones Totales", legend = false, palette = :Accent_5)
-plot!(horas, Float64.(mean_sist),  legend = false, lw=3, lc=:black)
-plot!(horas, Float64.(IC90upT),  legend = false, lw=2, lc=:red)
-plot!(horas, Float64.(IC90downT),  legend = false, lw=2, lc=:red)
-plot!(horas, Float64.(IC99upT),  legend = false, lw=2, lc=:lightgreen)
-plot!(horas, Float64.(IC99downT), legend = false, lw=2, lc=:lightgreen)
+savefig("grafico_solar.pdf")
 =#
+
+
+plot!(horas, pl_sist, title = "Predicciones Totales", legend = false, palette = :Accent_5)
+plot!(horas, Float64.(mean_sist),  legend = false, lw=3, lc=:red)
+plot!(horas, Float64.(IC90upT),  legend = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC90downT),  legend = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC99upT),  legend = false, lw=2, lc=:gray)
+plot!(horas, Float64.(IC99downT), legend = false, lw=2, lc=:gray)
+savefig("grafico_sist.pdf")
+
 
 #ylims!(0, 4000)
 #xlims!(1, 24)
