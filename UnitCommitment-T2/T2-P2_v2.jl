@@ -80,10 +80,8 @@ for e in 1:100
             end
             if (g<=40)
                 tot_eol+=sim_norm
-                #var_eol[t] += sigma^2/100
             else
                 tot_sun+=sim_norm
-                #var_sun[t] += sigma^2/100
             end
             tot_sist+=sim_norm  
         end
