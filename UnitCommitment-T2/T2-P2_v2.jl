@@ -183,37 +183,49 @@ for t in 1:24
 end
 #print(Float64.(mean_eol))
 
+#Gráficos
+
 #=
-plot(horas, pl_eol, title = "Predicciones Eolicas", legend = false, palette = :Accent_5)
-plot!(horas, Float64.(mean_eol),  legend = false, lw=3, lc=:red)
-plot!(horas, Float64.(IC90upE),  legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC90downE), legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC99upE), legend = false, lw=2, lc=:gray)
-plot!(horas, Float64.(IC99downE), legend = false, lw=2, lc=:gray)
+plot(horas, pl_eol, title = "Predicciones Eolicas", label=false, legend = false, palette = :Accent_5)
+plot!(horas, Float64.(mean_eol),  label = "Media", lw=3, lc=:red)
+plot!(horas, Float64.(IC90upE),  label = "IC 90%", lw=2, lc=:black)
+plot!(horas, Float64.(IC90downE), label = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC99upE), label = "IC 99%", lw=2, lc=:gray)
+plot!(horas, Float64.(IC99downE), label = false, lw=2, lc=:gray)
+plot!(legend=:outerbottom , legendcolumns=3)
+xlims!(1, 24)
+xlabel!("Hora")
+ylabel!("Generación [MW]")
 savefig("grafico_eolico.pdf")
 =#
 
+
 #=
-plot!(horas, pl_sun, title = "Predicciones Solares", legend = false, palette = :Accent_5)
-plot!(horas, Float64.(mean_sun),  legend = false, lw=3, lc=:red)
-plot!(horas, Float64.(IC90upS),  legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC90downS),  legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC99upS),  legend = false, lw=2, lc=:gray)
-plot!(horas, Float64.(IC99downS), legend = false, lw=2, lc=:gray)
+plot!(horas, pl_sun, title = "Predicciones Solares", label=false, legend = false, palette = :Accent_5)
+plot!(horas, Float64.(mean_sun),  label = "Media", lw=3, lc=:red)
+plot!(horas, Float64.(IC90upS),  label = "IC 90%", lw=2, lc=:black)
+plot!(horas, Float64.(IC90downS),  label = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC99upS),  label = "IC 99%", lw=2, lc=:gray)
+plot!(horas, Float64.(IC99downS), label = false, lw=2, lc=:gray)
+plot!(legend=:outerbottom , legendcolumns=3)
+#ylims!(0, 4000)
+xlims!(1, 24)
+xlabel!("Hora")
+ylabel!("Generación [MW]")
 savefig("grafico_solar.pdf")
 =#
 
 
-plot!(horas, pl_sist, title = "Predicciones Totales", legend = false, palette = :Accent_5)
-plot!(horas, Float64.(mean_sist),  legend = false, lw=3, lc=:red)
-plot!(horas, Float64.(IC90upT),  legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC90downT),  legend = false, lw=2, lc=:black)
-plot!(horas, Float64.(IC99upT),  legend = false, lw=2, lc=:gray)
-plot!(horas, Float64.(IC99downT), legend = false, lw=2, lc=:gray)
-savefig("grafico_sist.pdf")
-
-
-#ylims!(0, 4000)
-#xlims!(1, 24)
+#=
+plot!(horas, pl_sist, title = "Predicciones Totales", label=false, leyend = false, palette = :Accent_5)
+plot!(horas, Float64.(mean_sist),  label = "Media", lw=3, lc=:red)
+plot!(horas, Float64.(IC90upT),  label = "IC 90%", lw=2, lc=:black)
+plot!(horas, Float64.(IC90downT),  label = false, lw=2, lc=:black)
+plot!(horas, Float64.(IC99upT),  label = "IC 99%", lw=2, lc=:gray)
+plot!(horas, Float64.(IC99downT), label = false, lw=2, lc=:gray)
+plot!(legend=:outerbottom , legendcolumns=3)
+xlims!(1, 24)
 xlabel!("Hora")
 ylabel!("Generación [MW]")
+savefig("grafico_sist.pdf")
+=#
