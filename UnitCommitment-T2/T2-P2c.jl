@@ -114,12 +114,12 @@ renovables_ref  = DataFrame(XLSX.gettable(sheet_renovables,"A:Y",first_row=2,sto
 # Lo mismo ocurre en el DataFrame "renovables_ref".
 
 # Crear copias (aparentemente buena practica)
-buses = copy(buses_ref)
-demandP = copy(demandaP_ref[:,2:25])
-demandQ = copy(demandaQ_ref)
-generators = copy(generadores_ref)
-lines = copy(lineas_ref)
-renewables = copy(renovables_ref) 
+global buses = copy(buses_ref)
+global demandP = copy(demandaP_ref[:,2:25])
+global demandQ = copy(demandaQ_ref)
+global generators = copy(generadores_ref)
+global lines = copy(lineas_ref)
+global renewables = copy(renovables_ref) 
 
 #inclusión en variables
 P_base = 100
@@ -130,7 +130,7 @@ L = nrow(lines)             # N° Lineas
 R = nrow(renewables)        # N° Renovables
 
 # Debugg check
-println("Prueba de numero buses, deberia ser 14: ", N)
+#println("Prueba de numero buses, deberia ser 14: ", N)
 
 
 # Listas que almacenan los Structs 
@@ -157,7 +157,7 @@ end
 
 
 for i in 1:I
-    println("Generador", i)
+    #println("Generador", i)
     x = Generador(
         generators[i,1],    # 1- Name
         generators[i,2],    # 2- Bus
@@ -197,12 +197,6 @@ for i in 1:L
     push!(Lineas, x)
 end
 
-println("Demanda nodo 14, hora 2: ", demandP[14,2])
-println("Size de demandaP_ref: ", size(demandaP_ref))
-println("Size de demandP: ", size(demandP))
-
-
-
 
 
 
@@ -233,7 +227,7 @@ for e in 1:100
             if (sim_norm<0)                             #trunca valores negativos
                 sim_norm = 0
             end            
-            forecasts[g,t,e] = sim_norm 
+            forecasts[g,t,e] = Float64.(sim_norm )
         end        
     end
 end
@@ -253,76 +247,15 @@ end
 ####################################################################
 #               MODELO OPTIMIZACION
 ####################################################################
-
-### Problema optimizacion
-model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
-
-## Variables
-
-# Variables Economic Dispatch
-@variable(model, p[1:I, 1:T] >= 0)  # Potencia activa de generador i en tiempo t. Valor en p.u.
-@variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
-
-# Variables nuevas (UC)
-# No se utiliza potencia reactiva: Aproximacion DC
-#@variable(model, q[1:I, 1:T])       # Potencia reactiva de generador i en tiempo t. Valor en p.u. (puede ser < 0)
-@variable(model, u[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica encendido de gen i en t.
-@variable(model, v[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica apagado de gen i en t.
-@variable(model, w[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Estado ON(1)/OFF(0) de gen i en t.
-
-
-## Funcion Objetivo
-@objective(model, Min, sum(Gen[i].VariableCost * p[i,t] +  Gen[i].FixedCost * w[i,t] + Gen[i].StartCost * u[i,t] for i in 1:I, t in 1:T ))
-
-### Restricciones
-
-# Equilibrio de Potenica (APROXIMACION: Flujo DC  --> Demanda Potencia Activa)
-@constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
-sum(p[i,t] for i in 1:I if Gen[i].Bus == n) - demandP[n,t]      == 
-P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
-+ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
-
-# + sum(pb[b,t] for b in 1:B if Baterias[b].Barra == n) | Al lado izquierdo de la ecuación (baterias)
-
-#Flujo en lineas. Se considera o de origen, y d de destino
-@constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
-@constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
-#Angulo de referencia
-@constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
-
-### Restricciones de generadores
-
-## Potencias Activas y reactivas
-# Potencia Activa maxima
-@constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= w[i,t]*Gen[i].PotMax)
-# Potencia Activa minima
-@constraint(model, PMinConstraint[i in 1:I, t in 1:T], w[i,t]*Gen[i].PotMin <= p[i,t])
-
-
-## Rampas
-# Rampa up
-@constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Gen[i].Ramp + Gen[i].Sramp*u[i,t])
-# Rampa dn
-@constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= 0-Gen[i].Ramp - Gen[i].Sramp*v[i,t])
-
-## Tiempo minimo de encendido: sumo todos los x dentro de la ventana desde t=1 hasta el instante enterior al encendido
-@constraint(model, MinUpTime[i in 1:I, t in 2:T], sum(w[i,k] for k in 1:(t-1) if k >= t-Gen[i].MinUp) >= v[i,t]*Gen[i].MinUp)
-## Tiempo minimo de apagado
-@constraint(model, MinDnTime[i in 1:I, t in 2:T], sum((1-w[i,k]) for k in 1:(t-1) if k >= t-Gen[i].MinDn) >= u[i,t]*Gen[i].MinDn)
-
-
-
-
-
 ## Estados Binarios
 ##  Archivo Excel a leer
 archivo1 = "ResultadosCASE118-RES-90.xlsx"    # se comienza con el caso mas pequeño
 xf1 = XLSX.readxlsx(archivo1) # leer el archivo excel
 
 # Separar hojas del archivo
-sheet_buses = xf1["Encendido"]
-sheet_demandas = xf1["Apagado"]
-sheet_generadores = xf1["State"]
+sheet_encendido = xf1["Encendido"]
+sheet_apagado = xf1["Apagado"]
+sheet_estados = xf1["State"]
 
 function stop_condition(row)
     return isempty(row[1]) || row[1] == "END"
@@ -330,30 +263,90 @@ end
 
 # Crear DataFrames
 # XLSX.gettable(objeto hoja excel, Columnas de tabla, first_row= primera fila a considerar, stop_in_row_function: condicion dejar de leer)
-ON_ref       = DataFrame(XLSX.gettable(sheet_buses,"A:E",first_row=1,stop_in_row_function=stop_condition))
-OFF_ref    = DataFrame(XLSX.gettable(sheet_demandas,"A:Y",first_row=2,stop_in_row_function=stop_condition))
-Estado_ref    = DataFrame(XLSX.gettable(sheet_demandas,"AA:AY",first_row=2,stop_in_row_function=stop_condition))
-
+ON_ref       = DataFrame(XLSX.gettable(sheet_encendido,"A:X",first_row=1,stop_in_row_function=stop_condition))
+OFF_ref    = DataFrame(XLSX.gettable(sheet_apagado,"A:X",first_row=1,stop_in_row_function=stop_condition))
+Estado_ref    = DataFrame(XLSX.gettable(sheet_estados,"A:X",first_row=1,stop_in_row_function=stop_condition))
 # Crear copias (aparentemente buena practica)
-ON = copy(ON_ref)
-OFF = copy(OFF_ref)
-Estado = copy(Estado_ref)
+global ON = copy(ON_ref)
+global OFF = copy(OFF_ref)
+global Estado = copy(Estado_ref)
 
-#@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) == (w[i,t] - w[i,t-1]))
-@constraint(model, BinaryStateW[i in 1:I, t in 1:T], u[i,t] == ON[i,t])
-@constraint(model, BinaryStateV[i in 1:I, t in 1:T], v[i,t] == OFF[i,t])
-@constraint(model, BinaryStateU[i in 1:I, t in 1:T], w[i,t] == Estado[i,t])
 
 es_factible = 0
 suma_objetivos = 0
 #se fijan los valores de encendido y apagado:
 for E in 1:100
     # Potencia Renewables (condicionado a meteorologia)
-    @constraint(model, RenewableMax[i in (I-R+1):I, t in 1:T], p[i,t] <= forecasts[i,t,E])
-    if (is_solved_and_feasible(model) == true)
-        es_factible += 1
-        optimize!(model)
-        suma_objetivos += objective_value(model)
+    ### Problema optimizacion
+    model = Model(Gurobi.Optimizer) # Crear objeto "modelo" con el solver Gurobi
+
+    ## Variables
+
+    # Variables Economic Dispatch
+    @variable(model, p[1:I, 1:T] >= 0)  # Potencia activa de generador i en tiempo t. Valor en p.u.
+    @variable(model, d[1:N, 1:T])       # angulo (d de degree) de la barra n en tiempo t
+
+    # Variables nuevas (UC)
+    # No se utiliza potencia reactiva: Aproximacion DC
+    #@variable(model, q[1:I, 1:T])       # Potencia reactiva de generador i en tiempo t. Valor en p.u. (puede ser < 0)
+    @variable(model, u[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica encendido de gen i en t.
+    @variable(model, v[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Indica apagado de gen i en t.
+    @variable(model, w[1:I, 1:T], Bin)       # AGREGAR NATURALEZA {0,1}. Estado ON(1)/OFF(0) de gen i en t.
+
+
+    ## Funcion Objetivo
+    @objective(model, Min, sum(Gen[i].VariableCost * p[i,t] +  Gen[i].FixedCost * w[i,t] + Gen[i].StartCost * u[i,t] for i in 1:I, t in 1:T ))
+
+    ### Restricciones
+
+    # Equilibrio de Potenica (APROXIMACION: Flujo DC  --> Demanda Potencia Activa)
+    @constraint(model, DCPowerFlowConstraint[n in 1:N, t in 1:T], 
+    sum(p[i,t] for i in 1:I if Gen[i].Bus == n) - demandP[n,t]      == 
+    P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l in 1:L if Lineas[l].Inicio == n)
+    + P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Fin,t] - d[Lineas[l].Inicio,t]) for l in 1:L if Lineas[l].Fin == n))
+
+    # + sum(pb[b,t] for b in 1:B if Baterias[b].Barra == n) | Al lado izquierdo de la ecuación (baterias)
+
+    #Flujo en lineas. Se considera o de origen, y d de destino
+    @constraint(model, LineMaxPotInicioFin[l in 1:L, t in 1:T], 1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base) 
+    @constraint(model, LineMinPotFinInicio[l in 1:L, t in 1:T], -1/Lineas[l].X * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) <= Lineas[l].PotMax/P_base)
+    #Angulo de referencia
+    @constraint(model, RefDeg[1, t in 1:T], d[1,t] == 0)  
+
+    ### Restricciones de generadores
+
+    ## Potencias Activas y reactivas
+    # Potencia Activa maxima
+    @constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= w[i,t]*Gen[i].PotMax)
+    # Potencia Activa minima
+    @constraint(model, PMinConstraint[i in 1:I, t in 1:T], w[i,t]*Gen[i].PotMin <= p[i,t])
+
+
+    ## Rampas
+    # Rampa up
+    @constraint(model, RampUpConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) <= Gen[i].Ramp + Gen[i].Sramp*u[i,t])
+    # Rampa dn
+    @constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= 0-Gen[i].Ramp - Gen[i].Sramp*v[i,t])
+
+    ## Tiempo minimo de encendido: sumo todos los x dentro de la ventana desde t=1 hasta el instante enterior al encendido
+    @constraint(model, MinUpTime[i in 1:I, t in 2:T], sum(w[i,k] for k in 1:(t-1) if k >= t-Gen[i].MinUp) >= v[i,t]*Gen[i].MinUp)
+    ## Tiempo minimo de apagado
+    @constraint(model, MinDnTime[i in 1:I, t in 2:T], sum((1-w[i,k]) for k in 1:(t-1) if k >= t-Gen[i].MinDn) >= u[i,t]*Gen[i].MinDn)
+
+
+    
+
+    #@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) == (w[i,t] - w[i,t-1]))
+    @constraint(model, BinaryStateW[i in 1:I, t in 1:T], u[i,t] == ON[i,t])
+    @constraint(model, BinaryStateV[i in 1:I, t in 1:T], v[i,t] == OFF[i,t])
+    @constraint(model, BinaryStateU[i in 1:I, t in 1:T], w[i,t] == Estado[i,t])
+
+
+    @constraint(model, RenewableMax[i in (I-R+1):I, t in 1:T], p[i,t] <= forecasts[i-(I-R),t,E])
+    JuMP.optimize!(model)
+    if (termination_status(model) == MOI.OPTIMAL)
+        global es_factible += 1        
+        global suma_objetivos += objective_value(model)
     end
 end
 

@@ -458,11 +458,11 @@ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l
 
 ##Esto es lo nuevo en comparación al modelo de la pretunta a
 ##reservas con IC de 90%
-@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax * w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC90upT[t]-mean_sist[t]) )
-@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin * w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC90downT[t]) )
+#@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax * w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC90upT[t]-mean_sist[t]) )
+#@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin * w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC90downT[t]) )
 ##reservas con IC de 99%
-#@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax*w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC99upT[t]-mean_sist[t]) )
-#@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin*w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC99downT[t]) )
+@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax*w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC99upT[t]-mean_sist[t]) )
+@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin*w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC99downT[t]) )
 
 
 
@@ -512,7 +512,7 @@ v_v = JuMP.value.(v)
 v_w = JuMP.value.(w)
 
 # EXPORTAR EXCEL
-XLSX.openxlsx("ResultadosCASE118-RES-90.xlsx", mode="w") do xf
+XLSX.openxlsx("ResultadosCASE118-RES-99.xlsx", mode="w") do xf
     
     # Cambiar nombre primera hoja ("Sheet1")
     sheet1 = xf[1]
