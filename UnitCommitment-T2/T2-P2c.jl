@@ -8,189 +8,7 @@ using XLSX  # Se agrega para leer archivos .xlsx (Excel)
 
 Random.seed!(1234) #para que las simulaciones de prueba sean consistentes
 
-#Lectura de excel
-archivo = "Case118.xlsx"    # se comienza con el caso mas pequeño
-xf = XLSX.readxlsx(archivo) # leer el archivo excel
-
-# Separar hojas del archivo
-sheet_buses = xf["Buses"]
-sheet_demandas = xf["Demand"]
-sheet_generadores = xf["Generators"]
-sheet_lineas = xf["Lines"]
-sheet_renovables = xf["Renewables"]
-
-# Definir la función de parada
-# Se crea el DataFrame hasta que se reconozca la entrada "END"
-# De esta forma se puede leer tablas con cualquier numero de filas
-#   siempre y cuando terminen con un "END".
-function stop_condition(row)
-    return isempty(row[1]) || row[1] == "END"
-end
-renovables_ref  = DataFrame(XLSX.gettable(sheet_renovables,"A:Y",first_row=2,stop_in_row_function=stop_condition))
-renewables = copy(renovables_ref) 
-#println(renewables)
-
-# inicio simulaciones
-min_k_wind = 14.70 / 100
-max_k_wind = 30.92 / 100
-min_k_sun = 10.20 / 100
-max_k_sun = 14.02 / 100
-
-
-#estas listas tendrán 24 listas. Estos vectores se graficarán
-horas_eol = []
-horas_sun = []
-horas_sist = []
-for _ in 1:24
-    push!(horas_eol, 0)
-    push!(horas_sun, 0)
-    push!(horas_sist, 0)
-end
-
-
-#Cada uno de estos vectores incluye los 100 escenarios para una hora dada
-esc_eol = []
-esc_sun = []
-esc_sist = []
-for _ in 1:24
-    push!(esc_eol, 0)
-    push!(esc_sun, 0)
-    push!(esc_sist, 0)
-    
-end
-
-
-
-for e in 1:100    
-    for t in 1:24
-        tot_sun=0
-        tot_eol=0
-        tot_sist=0
-        for g in 1:60
-            mu = renewables[g,t+1]                      #acá toma valor del excel
-            if (g<=40)                                  #acá revisa si es solar o eólica
-                me=(max_k_wind-min_k_wind)/(24-1)
-                sigma = mu*(t*me+min_k_wind-me)
-            else
-                ms=(max_k_sun-min_k_sun)/(24-1)
-                sigma = mu*(t*ms+min_k_sun-ms)
-            end
-            sim_norm = mu + rand(Normal(0,sigma))       
-            if (sim_norm<0)                             #trunca valores negativos
-                sim_norm = 0
-            end
-            if (g<=40)
-                tot_eol+=sim_norm
-            else
-                tot_sun+=sim_norm
-            end
-            tot_sist+=sim_norm  
-        end
-        esc_eol[t]=tot_eol
-        esc_sun[t]=tot_sun
-        esc_sist[t]=tot_sist
-    end
-    global horas_eol = hcat(horas_eol,esc_eol)
-    global horas_sun = hcat(horas_sun,esc_sun)
-    global horas_sist = hcat(horas_sist,esc_sist)
-end
-
-pl_eol = Float64.(horas_eol[:, 1:end .!= 1])
-pl_sun = Float64.(horas_sun[:, 1:end .!= 1])
-pl_sist = Float64.(horas_sist[:, 1:end .!= 1])
-#println(Float64.(horas_eol[:, 1:end .!= 1]))
-#println(pl_eol)
-
-
-
-horas = 1:24
-
-
-#variables para creación de curva de medias.
-# Y variables para los intervalos de confianza
-#=
-mean_eol = []
-mean_sun = []
-mean_sist = []
-var_eol = []
-var_sun = []
-p90 = 1.645
-p99 = 2.575
-IC90upE = []
-IC90downE = []
-IC99upE = []
-IC99downE = []
-IC90upS = []
-IC90downS = []
-IC99upS = []
-IC99downS = []
-IC90upT = []
-IC90downT = []
-IC99upT = []
-IC99downT = []
-
-for _ in 1:24
-    push!(mean_eol, 0)
-    push!(mean_sun, 0)
-    push!(mean_sist, 0)
-    push!(var_eol, 0)
-    push!(var_sun, 0)
-    push!(IC90upE, 0)
-    push!(IC90downE, 0)
-    push!(IC99upE, 0)
-    push!(IC99downE, 0)
-    push!(IC90upS, 0)
-    push!(IC90downS, 0)
-    push!(IC99upS, 0)
-    push!(IC99downS, 0)
-    push!(IC90upT, 0)
-    push!(IC90downT, 0)
-    push!(IC99upT, 0)
-    push!(IC99downT, 0)
-end
-    
-for t in 1:24
-    tot_sun=0
-    tot_eol=0
-    tot_sist=0
-    me=(max_k_wind-min_k_wind)/(24-1)
-    ms=(max_k_sun-min_k_sun)/(24-1)
-    for g in 1:60
-        mu = renewables[g,t+1]                      #acá toma valor del excel 
-        if (g<=40)                                  #acá revisa si es solar o eólica 
-            sigma = mu*(t*me+min_k_wind-me)
-            tot_eol+=mu
-            var_eol[t] += sigma^2
-        else
-            sigma = mu*(t*ms+min_k_sun-ms)
-            tot_sun+=mu
-            var_sun[t] += sigma^2
-        end
-        tot_sist+=mu  
-    end
-    mean_eol[t] = tot_eol
-    mean_sun[t] = tot_sun
-    mean_sist[t] = tot_sist
-    IC90upE[t] = tot_eol + sqrt(var_eol[t])*p90
-    IC90downE[t] = tot_eol - sqrt(var_eol[t])*p90
-    IC99upE[t] = tot_eol + sqrt(var_eol[t])*p99
-    IC99downE[t] = tot_eol - sqrt(var_eol[t])*p99
-    IC90upS[t] =  tot_sun + sqrt(var_sun[t])*p90
-    IC90downS[t] = tot_sun - sqrt(var_sun[t])*p90
-    IC99upS[t] = tot_sun + sqrt(var_sun[t])*p99
-    IC99downS[t] = tot_sun - sqrt(var_sun[t])*p99
-    IC90upT[t] = tot_sist + sqrt(var_sun[t]+var_eol[t])*p90
-    IC90downT[t] = tot_sist - sqrt(var_sun[t]+var_eol[t])*p90
-    IC99upT[t] = tot_sist + sqrt(var_sun[t]+var_eol[t])*p99
-    IC99downT[t] = tot_sist - sqrt(var_sun[t]+var_eol[t])*p99
-end
-=#
-
-
-
-
-
-#Definición de struct: FALTA AGREGAR MAS INSTANCIAS DE CADA STRUCT (seba)  
+#Definición de struct: 
 
 # Barras
 struct Bus
@@ -383,6 +201,48 @@ println("Demanda nodo 14, hora 2: ", demandP[14,2])
 println("Size de demandaP_ref: ", size(demandaP_ref))
 println("Size de demandP: ", size(demandP))
 
+
+
+
+
+
+# inicio simulaciones
+min_k_wind = 14.70 / 100
+max_k_wind = 30.92 / 100
+min_k_sun = 10.20 / 100
+max_k_sun = 14.02 / 100
+
+
+
+#Cada uno de estos vectores incluye los 100 escenarios para una hora dada
+
+forecasts = zeros(60,24,100)  
+
+for e in 1:100    
+    for t in 1:24
+        for g in 1:60
+            mu = renewables[g,t+1]                      #acá toma valor del excel
+            if (g<=40)                                  #acá revisa si es solar o eólica
+                me=(max_k_wind-min_k_wind)/(24-1)
+                sigma = mu*(t*me+min_k_wind-me)
+            else
+                ms=(max_k_sun-min_k_sun)/(24-1)
+                sigma = mu*(t*ms+min_k_sun-ms)
+            end
+            sim_norm = mu + rand(Normal(0,sigma))       
+            if (sim_norm<0)                             #trunca valores negativos
+                sim_norm = 0
+            end            
+            forecasts[g,t,e] = sim_norm 
+        end        
+    end
+end
+
+#println(forecasts[1,1,1])
+
+
+
+
 # Struct demanda (quizas quitarlo)
 # for i in 1:N
 #     x = [demand[i,2],demand[i,3],demand[i,4],demand[i,5],demand[i,6],demand[i,7]]
@@ -437,8 +297,7 @@ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l
 @constraint(model, PMaxConstraint[i in 1:I, t in 1:T], p[i,t] <= w[i,t]*Gen[i].PotMax)
 # Potencia Activa minima
 @constraint(model, PMinConstraint[i in 1:I, t in 1:T], w[i,t]*Gen[i].PotMin <= p[i,t])
-# Potencia Renewables (condicionado a meteorologia)
-@constraint(model, RenewableMax[i in (I-R+1):I, t in 1:T], p[i,t] <= renewables[i-(I-R),t+1])
+
 
 ## Rampas
 # Rampa up
@@ -446,108 +305,66 @@ P_base*sum( (1/Lineas[l].X) * (d[Lineas[l].Inicio,t] - d[Lineas[l].Fin,t]) for l
 # Rampa dn
 @constraint(model, RampDownConstaint[i in 1:I, t in 2:T], (p[i,t] - p[i,t-1]) >= 0-Gen[i].Ramp - Gen[i].Sramp*v[i,t])
 
-## Estados Binarios
-@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) == (w[i,t] - w[i,t-1]))
-#@constraint(model, BinaryInitial[i in 1:I], (w[i,1] = State0[i]))   # Condicion inicial, por ahora libre
-
 ## Tiempo minimo de encendido: sumo todos los x dentro de la ventana desde t=1 hasta el instante enterior al encendido
 @constraint(model, MinUpTime[i in 1:I, t in 2:T], sum(w[i,k] for k in 1:(t-1) if k >= t-Gen[i].MinUp) >= v[i,t]*Gen[i].MinUp)
 ## Tiempo minimo de apagado
 @constraint(model, MinDnTime[i in 1:I, t in 2:T], sum((1-w[i,k]) for k in 1:(t-1) if k >= t-Gen[i].MinDn) >= u[i,t]*Gen[i].MinDn)
 
 
-##Esto es lo incluido en la parte b
-##reservas con IC de 90%
-#@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax * w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC90upT[t]-mean_sist[t]) )
-#@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin * w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC90downT[t]) )
-##reservas con IC de 99%
-#@constraint(model,ResUp[1, t in 1:T], sum(Gen[i].PotMax*w[i,t] for i in 1:I) >= sum( demandP[n,t] for n in 1:N) + (IC99upT[t]-mean_sist[t]) )
-#@constraint(model,ResDown[1, t in 1:T], sum(Gen[i].PotMin*w[i,t] for i in 1:I) <= sum( demandP[n,t] for n in 1:N) - (mean_sist[t]-IC99downT[t]) )
 
+
+
+## Estados Binarios
+##  Archivo Excel a leer
+archivo1 = "ResultadosCASE118-RES-90.xlsx"    # se comienza con el caso mas pequeño
+xf1 = XLSX.readxlsx(archivo1) # leer el archivo excel
+
+# Separar hojas del archivo
+sheet_buses = xf1["Encendido"]
+sheet_demandas = xf1["Apagado"]
+sheet_generadores = xf1["State"]
+
+function stop_condition(row)
+    return isempty(row[1]) || row[1] == "END"
+end
+
+# Crear DataFrames
+# XLSX.gettable(objeto hoja excel, Columnas de tabla, first_row= primera fila a considerar, stop_in_row_function: condicion dejar de leer)
+ON_ref       = DataFrame(XLSX.gettable(sheet_buses,"A:E",first_row=1,stop_in_row_function=stop_condition))
+OFF_ref    = DataFrame(XLSX.gettable(sheet_demandas,"A:Y",first_row=2,stop_in_row_function=stop_condition))
+Estado_ref    = DataFrame(XLSX.gettable(sheet_demandas,"AA:AY",first_row=2,stop_in_row_function=stop_condition))
+
+# Crear copias (aparentemente buena practica)
+ON = copy(ON_ref)
+OFF = copy(OFF_ref)
+Estado = copy(Estado_ref)
+
+#@constraint(model, BinaryState[i in 1:I, t in 2:T], (u[i,t] - v[i,t]) == (w[i,t] - w[i,t-1]))
+@constraint(model, BinaryStateW[i in 1:I, t in 1:T], u[i,t] == ON[i,t])
+@constraint(model, BinaryStateV[i in 1:I, t in 1:T], v[i,t] == OFF[i,t])
+@constraint(model, BinaryStateU[i in 1:I, t in 1:T], w[i,t] == Estado[i,t])
+
+es_factible = 0
+suma_objetivos = 0
 #se fijan los valores de encendido y apagado:
+for E in 1:100
+    # Potencia Renewables (condicionado a meteorologia)
+    @constraint(model, RenewableMax[i in (I-R+1):I, t in 1:T], p[i,t] <= forecasts[i,t,E])
+    if (is_solved_and_feasible(model) == true)
+        es_factible += 1
+        optimize!(model)
+        suma_objetivos += objective_value(model)
+    end
+end
 
+println("Probabilidad de requerimiento de load shedding y renewable curtailment = ",(1-es_factible/100)*100,"%")
+println("Promedio de costos ", suma_objetivos/es_factible)
 
-
-JuMP.optimize!(model)
 
 #    COSTOS
-
+#=
 totalCost = objective_value(model)
 fixCost = zeros(Float64, (I,T))     # fijo
 varCost = zeros(Float64, (I,T))     # variable
 startCost = zeros(Float64, (I,T))   # encendido
-
-# GUARDAR ARRAYS
-for i = 1:I                                                 # Recorrer filas    (generadores)
-    for t = 1:T                                             # Recorrer columnas (horas)
-        fixCost[i,t] = value(w[i,t])*Gen[i].FixedCost
-        varCost[i,t] = value(p[i,t])*Gen[i].VariableCost
-        startCost[i,t] = value(u[i,t])*Gen[i].StartCost
-    end
-end
-# Crear array para totales por hora
-fixCostT = zeros(Float64, (1,T))
-varCostT = zeros(Float64, (1,T))
-startCostT = zeros(Float64, (1,T))
-# Llenar array con la suma de todos los generadores en t
-for t=1:T
-    fixCostT[1,t] = sum(fixCost[:,t])
-    varCostT[1,t] = sum(varCost[:,t])
-    startCostT[1,t] = sum(startCost[:,t])
-end
-
-# CAPACIDADES NOMINALES
-nomCap = zeros(Float64, (I,T))
-for t=1:T
-    for i=1:(I-R)   # Generadores convencionales
-        nomCap[i,t] = value(w[i,t])*Gen[i].PotMax
-    end
-    for i=(I-R+1):I # Generadores ERNC
-        nomCap[i,t] = value(w[i,t])*renewables[i-(I-R),t+1]
-    end
-end
-
-# GUARDAR resultados
-v_p = JuMP.value.(p)
-v_u = JuMP.value.(u)
-v_v = JuMP.value.(v)
-v_w = JuMP.value.(w)
-
-# EXPORTAR EXCEL
-XLSX.openxlsx("ResultadosCASE118-RES-90.xlsx", mode="w") do xf
-    
-    # Cambiar nombre primera hoja ("Sheet1")
-    sheet1 = xf[1]
-    println(sheet1)
-    XLSX.rename!(sheet1, "Potencias")
-
-    # Agregar Hojas
-    XLSX.addsheet!(xf, "Encendido")
-    XLSX.addsheet!(xf, "Apagado")
-    XLSX.addsheet!(xf, "State")
-    XLSX.addsheet!(xf, "Costos")
-    XLSX.addsheet!(xf, "PotNominal")
-
-    # Asignar variables a cada hoja
-    sheet1 = xf[1]   # Hoja 1 -> Potencias
-    sheet2 = xf[2]   # Hoja 2 -> Endendidos
-    sheet3 = xf[3]   # Hoja 3 -> Apagados
-    sheet4 = xf[4]   # Hoja 4 -> State On/Off
-    sheet5 = xf[5]   # Hoja 5 -> Costos
-    sheet6 = xf[6]   # Hoja 6 -> Potencial de generacion
-
-    # Añadir las matrices
-    sheet1["A1"] = v_p
-    sheet2["A1"] = v_u
-    sheet3["A1"] = v_v
-    sheet4["A1"] = v_w
-    # Hoja costos: meter 3 vectores
-    sheet5["A1"] = "Costo Encendido"
-    sheet5["B1"] = startCostT
-    sheet5["A2"] = "Costo Fijo"
-    sheet5["B2"] = fixCostT
-    sheet5["A3"] = "Costo Variable"
-    sheet5["B3"] = varCostT
-    # Potencial
-    sheet6["A1"] = nomCap
-end
+=#
